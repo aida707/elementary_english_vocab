@@ -66,10 +66,33 @@ window.VocabApp = window.VocabApp || {};
     return userAnswer === question.answer;
   }
 
+  // 한국어로 설정된 휴대폰은 lang만 "en-US"로 주면 무시하고 기본 한국어 목소리로 읽는 경우가 많아서
+  // (tie → "티에"), 기기에 있는 영어 목소리를 직접 골라 쓴다. 목소리 목록은 늦게 채워질 수 있다.
+  let englishVoice = null;
+
+  function pickEnglishVoice() {
+    const voices = window.speechSynthesis.getVoices();
+    const english = voices.filter((v) => /^en([-_]|$)/i.test(v.lang));
+    const us = english.filter((v) => /^en[-_]US/i.test(v.lang));
+    englishVoice =
+      us.find((v) => v.localService) ||
+      us[0] ||
+      english.find((v) => /^en[-_]GB/i.test(v.lang)) ||
+      english[0] ||
+      null;
+  }
+
+  if ("speechSynthesis" in window) {
+    pickEnglishVoice();
+    window.speechSynthesis.addEventListener("voiceschanged", pickEnglishVoice);
+  }
+
   function speak(text) {
     if (!("speechSynthesis" in window)) return;
+    if (!englishVoice) pickEnglishVoice();
     const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = "en-US";
+    if (englishVoice) utter.voice = englishVoice;
+    utter.lang = englishVoice ? englishVoice.lang : "en-US";
     utter.rate = 0.85;
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utter);
