@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<title>초등 영단어 공부</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="app">
+
+  <header class="app-header">
+    <span class="app-title">🐣 초등 영단어 공부</span>
+    <button id="btn-switch-user" class="link-btn hidden">사용자 변경</button>
+  </header>
+
+  <!-- 사용자 선택 화면 -->
+  <section id="screen-users" class="screen">
+    <h2>누가 공부할까요?</h2>
+    <div id="user-list" class="user-list"></div>
+    <button id="btn-add-user" class="big-btn">+ 새 사용자 만들기</button>
+
+    <div id="add-user-form" class="add-user-form hidden">
+      <input id="new-user-name" type="text" maxlength="10" placeholder="이름을 입력하세요" />
+      <div id="emoji-picker" class="emoji-picker"></div>
+      <div class="row-btns">
+        <button id="btn-cancel-add" class="ghost-btn">취소</button>
+        <button id="btn-confirm-add" class="primary-btn">만들기</button>
+      </div>
+    </div>
+
+    <div class="data-row">
+      <button id="btn-export" class="link-btn">📤 기록 내보내기</button>
+      <button id="btn-import" class="link-btn">📥 기록 가져오기</button>
+      <input id="import-file" type="file" accept=".json,application/json" hidden />
+    </div>
+  </section>
+
+  <!-- 대시보드 화면 -->
+  <section id="screen-dashboard" class="screen hidden">
+    <div class="dash-profile">
+      <span id="dash-avatar" class="dash-avatar"></span>
+      <span id="dash-name" class="dash-name"></span>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-num" id="stat-due">0</div>
+        <div class="stat-label">오늘 복습</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-new">0</div>
+        <div class="stat-label">새 단어</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-accuracy">-</div>
+        <div class="stat-label">정답률</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stat-streak">0🔥</div>
+        <div class="stat-label">연속 학습일</div>
+      </div>
+    </div>
+
+    <button id="btn-start-study" class="big-btn">📚 오늘의 학습 시작</button>
+    <button id="btn-free-practice" class="big-btn secondary">🎲 자유 연습</button>
+    <div class="data-row">
+      <button id="btn-view-stats" class="link-btn">📊 통계 보기</button>
+      <button id="btn-mywords" class="link-btn">⭐ 우선 학습 단어</button>
+    </div>
+    <p id="dash-backlog-msg" class="empty-msg hidden"></p>
+    <p id="dash-empty-msg" class="empty-msg hidden">오늘 복습할 단어가 없어요! 자유 연습으로 더 배워볼까요?</p>
+  </section>
+
+  <!-- 우선 학습 단어 설정 화면 -->
+  <section id="screen-mywords" class="screen hidden">
+    <h2>⭐ 우선 학습 단어</h2>
+    <p class="help-text">
+      학교에서 배우는 단어처럼 먼저 공부할 단어를 <b>한 줄에 하나씩</b> 적어 주세요.
+      목록에 없는 단어는 <b>firefighter = 소방관</b>처럼 뜻을 함께 적거나, 아래 확인 목록에서 뜻을 입력하면 돼요.
+    </p>
+    <textarea id="mywords-input" class="mywords-input" rows="8" spellcheck="false"
+      placeholder="apple&#10;school&#10;firefighter = 소방관"></textarea>
+    <div id="mywords-summary" class="mywords-summary"></div>
+    <div id="mywords-preview" class="mywords-preview"></div>
+    <div class="row-btns">
+      <button id="btn-mywords-cancel" class="ghost-btn">취소</button>
+      <button id="btn-mywords-save" class="primary-btn">저장</button>
+    </div>
+  </section>
+
+  <!-- 통계 화면 -->
+  <section id="screen-stats" class="screen hidden">
+    <div class="dash-profile">
+      <span id="stats-avatar" class="dash-avatar"></span>
+      <span id="stats-name" class="dash-name"></span>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-num" id="stats-started">0</div>
+        <div class="stat-label">배운 단어</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stats-mastered">0</div>
+        <div class="stat-label">완전히 외운 단어</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stats-accuracy">-</div>
+        <div class="stat-label">전체 정답률</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="stats-longest-streak">0🔥</div>
+        <div class="stat-label">최고 연속 학습일</div>
+      </div>
+    </div>
+
+    <h2 class="stats-heading">주제별 학습 현황</h2>
+    <div id="stats-category-list" class="stats-category-list"></div>
+
+    <button id="btn-back-from-stats" class="big-btn">대시보드로 돌아가기</button>
+  </section>
+
+  <!-- 퀴즈 화면 -->
+  <section id="screen-quiz" class="screen hidden">
+    <div class="quiz-topbar">
+      <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+      <span id="progress-text" class="progress-text">1 / 10</span>
+    </div>
+
+    <div id="quiz-card" class="quiz-card"></div>
+
+    <div id="quiz-feedback" class="quiz-feedback"></div>
+
+    <button id="btn-next" class="big-btn" disabled>다음 문제 ▶</button>
+  </section>
+
+  <!-- 결과 화면 -->
+  <section id="screen-result" class="screen hidden">
+    <h2>학습 완료! 🎉</h2>
+    <div class="result-summary">
+      <div class="result-box correct">
+        <div id="result-correct" class="result-num">0</div>
+        <div>맞음</div>
+      </div>
+      <div class="result-box wrong">
+        <div id="result-wrong" class="result-num">0</div>
+        <div>틀림</div>
+      </div>
+    </div>
+    <div id="result-wrong-list" class="result-wrong-list"></div>
+    <button id="btn-more-review" class="big-btn hidden"></button>
+    <button id="btn-review-wrong" class="big-btn secondary hidden">🔁 오늘 틀린 문제 복습하기</button>
+    <button id="btn-back-dashboard" class="big-btn">대시보드로 돌아가기</button>
+  </section>
+
+</div>
+
+<script src="js/words.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/srs.js"></script>
+<script src="js/quiz.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
