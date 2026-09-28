@@ -36,12 +36,29 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 18px 4px;
 }
 
 .app-title {
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   font-weight: 800;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.header-links { display: flex; gap: 12px; }
+.header-links .link-btn { white-space: nowrap; padding: 0; }
+
+@media (max-width: 400px) {
+  .app-title { font-size: 1.1rem; }
+  .header-links { gap: 10px; }
+  .header-links .link-btn { font-size: 0.82rem; }
 }
 
 .link-btn {
@@ -160,11 +177,9 @@ h2 { margin: 4px 0; }
   box-shadow: 0 3px 0 rgba(0,0,0,0.06);
 }
 .stat-num { font-size: 1.6rem; font-weight: 800; color: var(--primary-dark); }
-.stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+.stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 2px; word-break: keep-all; }
 
 .empty-msg { text-align: center; color: var(--muted); font-weight: 600; }
-
-.stats-link { text-align: center; margin-top: -4px; }
 
 .data-row {
   display: flex;
@@ -172,6 +187,26 @@ h2 { margin: 4px 0; }
   gap: 18px;
   margin-top: 8px;
 }
+
+.danger-row { margin-top: auto; padding-top: 24px; text-align: center; }
+.danger-link { color: var(--muted); font-weight: 600; font-size: 0.82rem; }
+
+/* 도움말 */
+.help-section {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.06);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+.help-section h3 { margin: 0 0 6px; font-size: 1.05rem; }
+.help-section p { margin: 6px 0; }
+.help-section ul { margin: 6px 0; padding-left: 20px; }
+.help-section li { margin: 3px 0; }
+.help-table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 0.9rem; }
+.help-table th, .help-table td { border-bottom: 1px solid #eee; padding: 5px 8px; text-align: center; }
+.help-table th { color: var(--muted); font-weight: 700; }
 
 /* 우선 학습 단어 설정 */
 .help-text { margin: 0; font-size: 0.9rem; color: var(--muted); line-height: 1.55; }
@@ -230,57 +265,173 @@ h2 { margin: 4px 0; }
 .mywords-row.invalid { background: #fdeaef; }
 .mywords-row.invalid .en { color: var(--wrong); }
 
-.stats-heading { margin: 6px 0 0; font-size: 1.1rem; }
-
-.stats-category-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
+/* 통계 차트: 버튼 등 UI는 주황, 데이터는 파랑 한 가지(밝기 단계)로 구분한다. */
+#screen-stats {
+  --viz-1: #2a78d6;
+  --seq-100: #cde2fb;
+  --seq-200: #9ec5f4;
+  --seq-350: #5598e7;
+  --seq-500: #256abf;
+  --seq-650: #104281;
+  --viz-empty: #eeede8;
+  --viz-grid: #e1e0d9;
+  --viz-axis: #c3c2b7;
+  --viz-ink-2: #52514e;
 }
-.stats-cat-row {
+
+.stats-section {
   background: var(--card);
-  border-radius: 14px;
-  padding: 12px 14px;
-  box-shadow: 0 2px 0 rgba(0,0,0,0.05);
+  border-radius: 16px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 3px 0 rgba(0,0,0,0.06);
 }
-.stats-cat-top {
-  display: flex;
-  justify-content: space-between;
-  font-weight: 700;
-  font-size: 0.9rem;
-  margin-bottom: 6px;
-}
-.stats-cat-top .cat-count { color: var(--muted); font-weight: 600; }
-.stats-cat-bar {
-  height: 10px;
-  background: #eee;
-  border-radius: 6px;
-  overflow: hidden;
-}
-.stats-cat-fill {
-  height: 100%;
-  background: var(--secondary);
-  border-radius: 6px;
+.stats-section h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.stats-sub { margin: 0 0 12px; font-size: 0.82rem; color: var(--muted); line-height: 1.5; word-break: keep-all; }
+
+.viz-note { margin: 10px 0 0; font-size: 0.8rem; color: var(--muted); }
+.viz-muted { color: var(--muted); }
+
+[data-tip] { cursor: pointer; }
+[data-tip]:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+.viz-tooltip {
+  position: absolute;
+  z-index: 50;
+  max-width: 240px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #2b2d42;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
-/* 퀴즈 */
+.viz-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.viz-tile { background: #f7f7f4; border-radius: 12px; padding: 10px 8px; text-align: center; }
+.viz-tile-value { font-size: 1.25rem; font-weight: 800; color: var(--text); }
+.viz-tile-label { font-size: 0.75rem; color: var(--muted); margin-top: 2px; word-break: keep-all; }
+
+.viz-table-view { margin-top: 10px; font-size: 0.82rem; }
+.viz-table-view summary { color: var(--viz-ink-2); font-weight: 700; cursor: pointer; }
+.viz-table { border-collapse: collapse; width: 100%; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.viz-table th, .viz-table td { border-bottom: 1px solid var(--viz-grid); padding: 4px 6px; text-align: left; }
+.viz-table td:last-child, .viz-table th:last-child { text-align: right; }
+
+/* 학습 달력 */
+.viz-cal { display: flex; gap: 6px; justify-content: center; }
+.viz-cal-daylabels { display: grid; grid-template-rows: repeat(7, 18px); gap: 3px; font-size: 0.68rem; color: var(--muted); line-height: 18px; }
+.viz-cal-grid { display: flex; gap: 3px; }
+.viz-cal-week { display: grid; grid-template-rows: repeat(7, 18px); gap: 3px; }
+.viz-cal-cell { width: 18px; height: 18px; border-radius: 4px; background: var(--viz-empty); display: inline-block; }
+.viz-cal-cell.future { background: transparent; }
+.viz-cal-cell.cal-1 { background: var(--seq-200); }
+.viz-cal-cell.cal-2 { background: var(--seq-350); }
+.viz-cal-cell.cal-3 { background: var(--seq-500); }
+.viz-cal-cell.cal-4 { background: var(--seq-650); }
+.viz-cal-cell.today { box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--text); }
+.viz-cal-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 10px; margin-top: 10px; font-size: 0.72rem; color: var(--muted); }
+.viz-cal-legend-item { display: inline-flex; align-items: center; gap: 4px; }
+.viz-cal-legend .viz-cal-cell { width: 12px; height: 12px; border-radius: 3px; }
+
+/* 복습 일정 막대 */
+.viz-cols { font-size: 0.72rem; color: var(--muted); }
+.viz-cols-plot {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  margin: 18px 0 0 22px;
+  border-bottom: 1px solid var(--viz-axis);
+}
+.viz-grid-line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--viz-grid); }
+.viz-grid-label { position: absolute; left: -22px; top: -8px; width: 18px; text-align: right; font-variant-numeric: tabular-nums; }
+.viz-ref-line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--viz-ink-2); }
+.viz-ref-label { position: absolute; right: 0; top: -16px; color: var(--viz-ink-2); font-weight: 700; }
+.viz-col-slot { flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; border-radius: 4px; }
+.viz-col-slot:hover { background: rgba(42,120,214,0.06); }
+.viz-col-bar { position: relative; width: 100%; max-width: 14px; background: var(--viz-1); border-radius: 4px 4px 0 0; }
+.viz-col-label { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); padding-bottom: 2px; color: var(--text); font-weight: 700; white-space: nowrap; }
+.viz-cols-axis { display: flex; gap: 2px; margin-left: 22px; padding-top: 4px; }
+.viz-cols-axis span { flex: 1; text-align: center; white-space: nowrap; overflow: visible; }
+.viz-axis-caption { text-align: center; margin: 2px 0 12px 22px; }
+
+/* 유형별 레벨 분포 */
+.viz-matrix-wrap { overflow-x: auto; }
+.viz-matrix { border-collapse: separate; border-spacing: 2px; width: 100%; font-size: 0.74rem; font-variant-numeric: tabular-nums; }
+.viz-matrix th { color: var(--muted); font-weight: 700; padding: 2px 0; }
+.viz-matrix .viz-matrix-rowhead { text-align: left; color: var(--text); white-space: nowrap; padding-right: 2px; }
+.viz-matrix td { text-align: center; padding: 6px 0; border-radius: 4px; min-width: 19px; color: var(--text); }
+.viz-matrix td.zero { color: var(--viz-axis); background: #f7f7f4; }
+.viz-matrix .lv-1 { background: var(--seq-100); }
+.viz-matrix .lv-2 { background: var(--seq-200); }
+.viz-matrix .lv-3 { background: var(--seq-350); color: #fff; }
+.viz-matrix .lv-4 { background: var(--seq-500); color: #fff; }
+.viz-matrix .lv-5 { background: var(--seq-650); color: #fff; }
+.viz-matrix .viz-matrix-rest { color: var(--muted); padding-left: 2px; white-space: nowrap; }
+.viz-swatch { width: 14px; height: 10px; border-radius: 3px; display: inline-block; }
+.viz-swatch.lv-1 { background: var(--seq-100); }
+.viz-swatch.lv-2 { background: var(--seq-200); }
+.viz-swatch.lv-3 { background: var(--seq-350); }
+.viz-swatch.lv-4 { background: var(--seq-500); }
+.viz-swatch.lv-5 { background: var(--seq-650); }
+
+/* 유형별 정답률 */
+.viz-bar-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 0.85rem; }
+.viz-bar-label { flex: 0 0 80px; font-weight: 700; white-space: nowrap; }
+.viz-bar-track { flex: 1; height: 14px; background: var(--seq-100); border-radius: 0 4px 4px 0; }
+.viz-bar-fill { height: 100%; background: var(--viz-1); border-radius: 0 4px 4px 0; }
+.viz-bar-value { flex: 0 0 80px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.viz-bar-value small { color: var(--muted); font-weight: 600; }
+
+/* 우선 학습 단어 진행률 */
+.viz-meter-row { margin: 10px 0; }
+.viz-meter-top { display: flex; justify-content: space-between; gap: 8px; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+.viz-meter-value { font-weight: 800; white-space: nowrap; }
+.viz-meter-track { height: 10px; background: var(--seq-100); border-radius: 0 4px 4px 0; }
+.viz-meter-fill { height: 100%; background: var(--viz-1); border-radius: 0 4px 4px 0; }
+
+/* 자주 틀리는 문제 */
+.viz-rank { margin: 0; padding-left: 22px; }
+.viz-rank-item { padding: 7px 0; border-bottom: 1px solid var(--viz-grid); }
+.viz-rank-item:last-child { border-bottom: none; }
+.viz-rank-main { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.viz-rank-en { font-weight: 800; color: var(--primary-dark); }
+.viz-rank-ko { font-size: 0.82rem; color: var(--muted); }
+.viz-rank-meta { display: flex; gap: 10px; align-items: center; margin-top: 3px; font-size: 0.78rem; font-weight: 600; }
+.viz-chip { background: #eef4fc; color: #1c5cab; border-radius: 10px; padding: 1px 8px; }
+
+/* 퀴즈: 화면 높이에 딱 맞춰서 "다음 문제" 버튼이 항상 같은 자리(맨 아래)에 있게 하고,
+   문제 카드가 남는 공간을 차지한다. 카드 안 글자는 --fit 비율로 줄어든다(main.js). */
+body.quiz-mode #app {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  padding-bottom: 16px;
+}
+body.quiz-mode .app-header { padding: 12px 4px; }
+#screen-quiz { min-height: 0; gap: 12px; }
+
 .quiz-topbar { display: flex; align-items: center; gap: 10px; }
 .progress-bar { flex: 1; height: 10px; background: #eee; border-radius: 6px; overflow: hidden; }
 .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width .25s ease; }
 .progress-text { font-weight: 700; font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
 
 .quiz-card {
+  --fit: 1;
   background: var(--card);
   border-radius: var(--radius);
-  padding: 28px 20px;
+  padding: calc(24px * var(--fit)) 16px;
   text-align: center;
   box-shadow: 0 4px 0 rgba(0,0,0,0.06);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: calc(16px * var(--fit));
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   justify-content: center;
+  justify-content: safe center;
 }
 
 .quiz-type-label {
@@ -294,24 +445,28 @@ h2 { margin: 4px 0; }
 }
 
 .quiz-prompt {
-  font-size: 2rem;
+  font-size: calc(2rem * var(--fit));
   font-weight: 800;
-  word-break: break-word;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
-.quiz-prompt.small { font-size: 1.5rem; }
+.quiz-prompt.small { font-size: calc(1.5rem * var(--fit)); }
 
 .options-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: calc(12px * var(--fit));
 }
 .option-btn {
-  padding: 16px 8px;
+  padding: calc(14px * var(--fit)) 8px;
   border-radius: 14px;
   border: 2px solid #eee;
   background: #fbfbfb;
-  font-size: 1.05rem;
+  font-size: calc(1.05rem * var(--fit));
   font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+  overflow-wrap: anywhere;
   cursor: pointer;
 }
 .option-btn:active { transform: scale(0.97); }
@@ -319,30 +474,43 @@ h2 { margin: 4px 0; }
 .option-btn.wrong { background: #fdeaef; border-color: var(--wrong); color: #c2185b; }
 .option-btn:disabled { cursor: default; }
 
+/* 입력칸 70% : 확인 버튼 30%. flex-basis를 0으로 둬야 input의 기본 너비 때문에
+   입력칸이 버튼 자리를 밀어내지 않는다. */
 .type-input {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 .type-input input {
-  flex: 1;
-  padding: 14px;
-  font-size: 1.2rem;
+  flex: 7 1 0;
+  min-width: 0;
+  padding: 12px 10px;
+  font-size: 1.1rem;
   border-radius: 14px;
   border: 2px solid #eee;
   text-align: center;
 }
+.type-input .primary-btn { flex: 3 1 0; min-width: 0; padding: 12px 6px; }
 .type-input input.correct { border-color: var(--correct); background: #e3f7e5; }
 .type-input input.wrong { border-color: var(--wrong); background: #fdeaef; }
 
+/* 두 줄 높이로 고정. 긴 정답(뜻)은 main.js가 글자를 줄여서 이 안에 맞춘다. */
 .quiz-feedback {
+  --fit: 1;
+  flex: 0 0 auto;
+  height: 3.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   font-weight: 800;
-  font-size: 1.1rem;
-  padding: 10px;
+  font-size: calc(1.05rem * var(--fit));
+  line-height: 1.25;
+  padding: 4px 10px;
   border-radius: 14px;
-  min-height: 1.1em;
-  box-sizing: content-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
+#btn-next { flex: 0 0 auto; }
 .quiz-feedback.correct { background: #e3f7e5; color: #2e7d32; }
 .quiz-feedback.wrong { background: #fdeaef; color: #c2185b; }
 

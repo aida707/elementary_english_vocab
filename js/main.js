@@ -1,7 +1,7 @@
 const BASE_WORDS = window.VocabApp.WORDS;
 const BASE_WORDS_BY_ID = new Map(BASE_WORDS.map((w) => [w.id, w]));
 const store = window.VocabApp.store;
-const { newCard, recordAnswer, isDue, isMastered } = window.VocabApp.srs;
+const { newCard, recordAnswer, isDue, isMastered, INTERVAL_DAYS } = window.VocabApp.srs;
 const { buildQuestion, checkAnswer, shuffle, speak, QUESTION_TYPES } = window.VocabApp.quiz;
 
 const FREE_PRACTICE_SIZE = 15;
@@ -26,6 +26,7 @@ const screens = {
   result: el("screen-result"),
   stats: el("screen-stats"),
   mywords: el("screen-mywords"),
+  help: el("screen-help"),
 };
 
 let state = {
@@ -33,6 +34,9 @@ let state = {
   progress: {},
   stats: {},
   session: [],
+  sessionItems: [],
+  screen: "users",
+  screenBeforeHelp: "users",
   reviewMode: false,
   index: 0,
   answered: false,
@@ -46,9 +50,46 @@ let state = {
 };
 
 function showScreen(name) {
+  state.screen = name;
   Object.values(screens).forEach((s) => s.classList.add("hidden"));
   screens[name].classList.remove("hidden");
+  document.body.classList.toggle("quiz-mode", name === "quiz");
   el("btn-switch-user").classList.toggle("hidden", name !== "dashboard" && name !== "stats");
+  el("btn-help").classList.toggle("hidden", name === "quiz" || name === "help");
+  window.scrollTo(0, 0);
+}
+
+function openHelp() {
+  state.screenBeforeHelp = state.screen;
+  showScreen("help");
+}
+
+// 제목을 누르면 어디서든 첫 화면으로. 문제를 풀던 중이면 먼저 확인하고,
+// 이번 세션에서 아직 풀지 않은 새 문제만큼 오늘의 새 단어 한도를 돌려준다.
+function goHome() {
+  if (state.screen === "quiz") {
+    if (!confirm("학습을 그만두고 처음 화면으로 갈까요?\n지금까지 푼 문제는 저장돼요.")) return;
+    const firstUnanswered = state.answered ? state.index + 1 : state.index;
+    const unusedNew = state.sessionItems.slice(firstUnanswered).filter((it) => it.isNew).length;
+    if (unusedNew && !state.reviewMode) {
+      state.stats.newWordsToday = Math.max(0, state.stats.newWordsToday - unusedNew);
+      store.saveStats(state.user.id, state.stats);
+    }
+  }
+  state.reviewMode = false;
+  renderUserList();
+  showScreen("users");
+}
+
+function deleteCurrentUser() {
+  const { id, name } = state.user;
+  if (!confirm(`"${name}" 프로필과 모든 학습 기록을 삭제할까요?\n\n삭제하면 되돌릴 수 없어요. 필요하면 먼저 첫 화면의 "기록 내보내기"로 백업하세요.`)) {
+    return;
+  }
+  store.deleteUser(id);
+  state.user = null;
+  renderUserList();
+  showScreen("users");
 }
 
 // ---------- 사용자 선택 ----------
@@ -201,16 +242,16 @@ function renderDashboard() {
   el("dash-avatar").textContent = state.user.avatar;
   el("dash-name").textContent = `${state.user.name}님`;
 
+  // 학습한 단어 수는 실제 단어 개수(통계의 "배운 단어"와 같음). 복습/새 단어 수는 실제로 풀게 될
+  // 문제 개수와 맞추기 위해 (단어, 문제유형) 쌍 단위로 센다.
+  const learned = state.words.filter((w) => state.progress[w.id]).length;
   const due = computeDueItems().length;
   const newAvail = computeNewAvailable();
   const reviewToday = Math.min(due, MAX_SESSION_SIZE - newAvail);
-  const accuracy = state.stats.totalAnswered
-    ? Math.round((state.stats.totalCorrect / state.stats.totalAnswered) * 100) + "%"
-    : "-";
 
-  el("stat-due").textContent = reviewToday;
+  el("stat-learned").textContent = learned;
+  el("stat-due").textContent = due;
   el("stat-new").textContent = newAvail;
-  el("stat-accuracy").textContent = accuracy;
   el("stat-streak").textContent = `${state.stats.streak || 0}🔥`;
 
   const nothingToStudy = due === 0 && newAvail === 0;
@@ -242,28 +283,16 @@ function renderStats() {
   el("stats-accuracy").textContent = accuracy;
   el("stats-longest-streak").textContent = `${state.stats.longestStreak || 0}🔥`;
 
-  const categories = new Map();
-  state.words.forEach((w) => {
-    if (!categories.has(w.cat)) categories.set(w.cat, { total: 0, learned: 0 });
-    const c = categories.get(w.cat);
-    c.total++;
-    if (state.progress[w.id]) c.learned++;
-  });
-
-  const list = el("stats-category-list");
-  list.innerHTML = "";
-  categories.forEach((c, name) => {
-    const pct = Math.round((c.learned / c.total) * 100);
-    const row = document.createElement("div");
-    row.className = "stats-cat-row";
-    row.innerHTML = `
-      <div class="stats-cat-top">
-        <span>${name}로 시작하는 단어</span>
-        <span class="cat-count">${c.learned}/${c.total}</span>
-      </div>
-      <div class="stats-cat-bar"><div class="stats-cat-fill" style="width:${pct}%"></div></div>
-    `;
-    list.appendChild(row);
+  window.VocabApp.statsView.render({
+    todayStr: store.todayStr(),
+    words: state.words,
+    progress: state.progress,
+    stats: state.stats,
+    priorityIds: state.priorityIds,
+    types: QUESTION_TYPES,
+    maxLevel: INTERVAL_DAYS.length - 1,
+    dailyCap: MAX_SESSION_SIZE,
+    isMastered,
   });
 }
 
@@ -273,7 +302,9 @@ function renderStats() {
 function buildStudyItems() {
   const newCount = computeNewAvailable();
   const reviews = pickReviews(computeDueItems(), newCount);
-  const newItems = computeNewCandidatePairs().slice(0, newCount);
+  const newItems = computeNewCandidatePairs()
+    .slice(0, newCount)
+    .map((it) => ({ ...it, isNew: true }));
   if (newItems.length) {
     state.stats.newWordsToday += newItems.length;
     store.saveStats(state.user.id, state.stats);
@@ -302,6 +333,7 @@ function startSession(mode) {
   store.saveStats(state.user.id, state.stats);
 
   state.reviewMode = false;
+  state.sessionItems = items;
   state.session = items.map(({ word, type }) => buildQuestion(word, state.words, type));
   state.index = 0;
   state.result = { correct: 0, wrong: 0, wrongWords: [] };
@@ -317,6 +349,7 @@ function startWrongReview() {
     .filter((it) => it.word);
   if (!items.length) return;
   state.reviewMode = true;
+  state.sessionItems = items;
   state.session = items.map(({ word, type }) => buildQuestion(word, state.words, type));
   state.index = 0;
   state.result = { correct: 0, wrong: 0, wrongWords: [] };
@@ -334,6 +367,7 @@ function renderQuestion() {
   const feedback = el("quiz-feedback");
   feedback.textContent = "";
   feedback.classList.remove("correct", "wrong");
+  feedback.style.setProperty("--fit", "1");
   el("btn-next").disabled = true;
 
   const card = el("quiz-card");
@@ -367,7 +401,11 @@ function renderQuestion() {
     const input = document.createElement("input");
     input.type = "text";
     input.autocomplete = "off";
-    input.placeholder = "영어 단어를 입력하세요";
+    input.placeholder = "영어로 쓰기";
+    // 휴대폰 키보드의 자동 대문자·자동 고침이 답을 바꾸지 않도록
+    input.setAttribute("autocapitalize", "none");
+    input.setAttribute("autocorrect", "off");
+    input.spellcheck = false;
     const submit = document.createElement("button");
     submit.className = "primary-btn";
     submit.textContent = "확인";
@@ -380,6 +418,18 @@ function renderQuestion() {
     wrap.appendChild(submit);
     card.appendChild(wrap);
     setTimeout(() => input.focus(), 50);
+  }
+
+  fitToBox(card);
+}
+
+// 내용이 상자를 넘치면 --fit 비율을 조금씩 줄여서(글자·여백이 함께 작아짐) 상자 안에 맞춘다.
+function fitToBox(box, minScale = 0.45) {
+  let scale = 1;
+  box.style.setProperty("--fit", "1");
+  while (box.scrollHeight > box.clientHeight + 1 && scale > minScale) {
+    scale -= 0.05;
+    box.style.setProperty("--fit", scale.toFixed(2));
   }
 }
 
@@ -430,6 +480,7 @@ function handleAnswer(question, value, sourceEl) {
     }
     state.stats.wrongToday = wrongToday;
 
+    recordDailyActivity(state.stats);
     store.saveStats(state.user.id, state.stats);
   }
 
@@ -458,9 +509,27 @@ function handleAnswer(question, value, sourceEl) {
   feedback.textContent = correct
     ? "정답이에요! 잘했어요 🎉"
     : `아쉬워요! 정답은 "${question.answer}" 예요`;
+  fitToBox(feedback, 0.6);
 
   speak(question.word.en);
   el("btn-next").disabled = false;
+}
+
+// 날짜별로 푼 문제 수를 남긴다(통계의 학습 달력용). 1년 조금 넘게만 보관한다.
+const DAILY_LOG_KEEP_DAYS = 400;
+
+function recordDailyActivity(stats) {
+  const today = store.todayStr();
+  const log = stats.dailyLog && typeof stats.dailyLog === "object" ? stats.dailyLog : {};
+  log[today] = (Number(log[today]) || 0) + 1;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - DAILY_LOG_KEEP_DAYS);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+  Object.keys(log).forEach((day) => {
+    if (day < cutoffStr) delete log[day];
+  });
+  stats.dailyLog = log;
+  if (!stats.dailyLogStart) stats.dailyLogStart = today;
 }
 
 function nextQuestion() {
@@ -671,10 +740,38 @@ async function importRecords(file) {
 
 // ---------- 이벤트 바인딩 ----------
 
+function renderHelpDetails() {
+  el("help-word-count").textContent = BASE_WORDS.length;
+  const rows = el("help-level-rows");
+  rows.innerHTML = "";
+  INTERVAL_DAYS.forEach((days, level) => {
+    const tr = document.createElement("tr");
+    const lv = document.createElement("td");
+    lv.textContent = level;
+    const next = document.createElement("td");
+    next.textContent = days === 1 ? "다음 날" : `${days}일 후`;
+    tr.append(lv, next);
+    rows.appendChild(tr);
+  });
+}
+
 function init() {
   store.migrateSchemaIfNeeded();
+  renderHelpDetails();
   renderUserList();
   showScreen("users");
+
+  el("btn-home").addEventListener("click", goHome);
+  el("btn-help").addEventListener("click", openHelp);
+  el("btn-back-from-help").addEventListener("click", () => showScreen(state.screenBeforeHelp));
+  el("btn-delete-user").addEventListener("click", deleteCurrentUser);
+
+  // 휴대폰을 돌리거나 창 크기가 바뀌면 문제 카드 글자 크기를 다시 맞춘다.
+  window.addEventListener("resize", () => {
+    if (state.screen !== "quiz") return;
+    fitToBox(el("quiz-card"));
+    if (el("quiz-feedback").textContent) fitToBox(el("quiz-feedback"), 0.6);
+  });
 
   el("btn-add-user").addEventListener("click", () => {
     state.selectedEmoji = EMOJIS[0];

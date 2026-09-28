@@ -11,8 +11,11 @@
 <div id="app">
 
   <header class="app-header">
-    <span class="app-title">🐣 초등 영단어 공부</span>
-    <button id="btn-switch-user" class="link-btn hidden">사용자 변경</button>
+    <button id="btn-home" class="app-title" title="처음 화면으로">🐣 초등 영단어 공부</button>
+    <div class="header-links">
+      <button id="btn-help" class="link-btn">도움말</button>
+      <button id="btn-switch-user" class="link-btn hidden">사용자 변경</button>
+    </div>
   </header>
 
   <!-- 사용자 선택 화면 -->
@@ -46,16 +49,16 @@
 
     <div class="stat-grid">
       <div class="stat-card">
+        <div class="stat-num" id="stat-learned">0</div>
+        <div class="stat-label">지금까지 1번 이상 학습한 단어 수</div>
+      </div>
+      <div class="stat-card">
         <div class="stat-num" id="stat-due">0</div>
-        <div class="stat-label">오늘 복습</div>
+        <div class="stat-label">복습 주기가 돌아온 단어 수</div>
       </div>
       <div class="stat-card">
         <div class="stat-num" id="stat-new">0</div>
-        <div class="stat-label">새 단어</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-num" id="stat-accuracy">-</div>
-        <div class="stat-label">정답률</div>
+        <div class="stat-label">오늘의 새 단어 수</div>
       </div>
       <div class="stat-card">
         <div class="stat-num" id="stat-streak">0🔥</div>
@@ -71,6 +74,84 @@
     </div>
     <p id="dash-backlog-msg" class="empty-msg hidden"></p>
     <p id="dash-empty-msg" class="empty-msg hidden">오늘 복습할 단어가 없어요! 자유 연습으로 더 배워볼까요?</p>
+    <div class="danger-row">
+      <button id="btn-delete-user" class="link-btn danger-link">🗑 이 프로필 삭제</button>
+    </div>
+  </section>
+
+  <!-- 도움말 화면 -->
+  <section id="screen-help" class="screen hidden">
+    <h2>❓ 도움말</h2>
+
+    <div class="help-section">
+      <h3>📖 학습 단어</h3>
+      <p>교육부 지정 초등 필수 영단어 800개에 초등 기본 단어 몇 개를 더해 모두 <b><span id="help-word-count">810</span>개</b>의 단어로 공부해요.</p>
+      <p>여기에 없는 단어도 <b>⭐ 우선 학습 단어</b>에서 뜻과 함께 직접 추가할 수 있어요.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>🧩 문제 유형</h3>
+      <ul>
+        <li><b>단어를 보고 뜻 고르기</b></li>
+        <li><b>뜻을 보고 단어 고르기</b></li>
+        <li><b>빈칸에 알맞은 철자 고르기</b></li>
+        <li><b>뜻을 보고 단어 직접 쓰기</b></li>
+      </ul>
+      <p>한 단어의 네 가지 유형은 <b>각각 따로</b> 기록돼요. 예를 들어 뜻 고르기는 잘하는데 쓰기를 자주 틀리면, 쓰기 문제만 더 자주 나와요. 네 가지를 모두 익혀야 그 단어를 다 외운 거예요.</p>
+      <p>그래서 프로필 첫 화면의 <b>"복습 주기가 돌아온 단어 수"</b>와 <b>"오늘의 새 단어 수"</b>는 실제로 풀게 될 문제 개수, 즉 <b>단어와 문제 유형의 짝 하나하나</b>를 센 수예요. 예를 들어 apple의 뜻 고르기와 쓰기가 둘 다 복습할 때가 되면 2로 세요. <b>"지금까지 1번 이상 학습한 단어 수"</b>는 실제 단어 개수예요.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>📚 오늘의 학습</h3>
+      <ul>
+        <li>한 번에 <b>최대 30문제</b>예요.</li>
+        <li>처음 보는 문제는 <b>하루 20개</b>까지 나와요. 복습이 많은 날에도 <b>최소 5개</b>는 새로 배워요.</li>
+        <li>나머지 자리는 복습 주기가 돌아온 문제로 채우는데, <b>가장 오래 밀린 것부터</b> 나와요.</li>
+        <li>다 풀고도 복습이 남아 있으면 결과 화면의 <b>"남은 복습 더 하기"</b>로 30개씩 더 풀 수 있어요. 여기엔 새 문제가 나오지 않아요.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3>⭐ 우선 학습 단어</h3>
+      <p>학교에서 배우는 단어처럼 먼저 공부할 단어를 한 줄에 하나씩 적어 두면, 새 문제를 낼 때 이 단어들을 먼저 내요. 이미 시작한 우선 단어의 남은 유형 → 아직 안 배운 우선 단어 → 나머지 단어 순서이고, 나머지 단어는 무작위로 나와요.</p>
+      <p>목록에 없는 단어는 <b>dinosaur = 공룡</b>처럼 뜻을 함께 적으면 돼요.</p>
+    </div>
+
+    <div class="help-section">
+      <h3>🔁 레벨과 복습 주기</h3>
+      <p>각 문제에는 <b>레벨(0~7)</b>이 있고, 레벨이 높을수록 다음 복습까지의 간격이 길어져요. 잘 아는 문제는 가끔, 헷갈리는 문제는 자주 나오게 하는 방식이에요.</p>
+      <table class="help-table">
+        <thead><tr><th>레벨</th><th>다음 복습</th></tr></thead>
+        <tbody id="help-level-rows"></tbody>
+      </table>
+      <ul>
+        <li>처음 보고 <b>맞히면 레벨 2</b>(4일 후), <b>틀리면 레벨 0</b>(다음 날)이 돼요.</li>
+        <li>복습에서 <b>맞히면 한 레벨 올라가고</b>, <b>틀리면 한 레벨 내려가요</b>. 레벨 0 밑으로는 내려가지 않아요.</li>
+        <li>레벨 7이 된 문제도 120일마다 한 번씩 다시 확인해요.</li>
+        <li>네 가지 유형이 모두 레벨 7이 되면 통계의 <b>"완전히 외운 단어"</b>로 세요.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3>🎲 그 밖의 학습</h3>
+      <ul>
+        <li><b>자유 연습</b>: 전체 단어에서 무작위로 15문제를 풀어요. 푼 결과는 기록에 반영돼요.</li>
+        <li><b>오늘 틀린 문제 복습하기</b>: 오늘 틀린 문제만 다시 풀어요. 공부한 직후 한 번 더 보는 연습이라 레벨과 복습 주기에는 영향을 주지 않아요.</li>
+        <li>문제를 풀다가 그만두고 싶으면 왼쪽 위 <b>"🐣 초등 영단어 공부"</b>를 누르세요. 그때까지 푼 문제는 저장돼요.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h3>💾 기록 저장</h3>
+      <ul>
+        <li>학습 기록은 <b>지금 쓰는 브라우저에만</b> 저장되고, 서버로 보내지 않아요.</li>
+        <li>다른 기기나 다른 브라우저에서는 기록이 따로예요. 옮기려면 첫 화면의 <b>기록 내보내기</b>로 파일을 저장하고, 새 기기에서 <b>기록 가져오기</b>로 불러오세요.</li>
+        <li>브라우저 데이터를 지우면 기록도 사라지니, 가끔 내보내기로 백업해 두세요.</li>
+        <li>프로필 화면 맨 아래의 <b>이 프로필 삭제</b>로 사용자와 그 기록을 지울 수 있어요. 되돌릴 수 없어요.</li>
+      </ul>
+    </div>
+
+    <button id="btn-back-from-help" class="big-btn">돌아가기</button>
   </section>
 
   <!-- 우선 학습 단어 설정 화면 -->
@@ -116,8 +197,38 @@
       </div>
     </div>
 
-    <h2 class="stats-heading">주제별 학습 현황</h2>
-    <div id="stats-category-list" class="stats-category-list"></div>
+    <div class="stats-section">
+      <h3>📅 학습 기록</h3>
+      <p class="stats-sub">최근 12주 동안 날마다 푼 문제 수예요. 칸을 누르면 날짜와 문제 수가 보여요.</p>
+      <div id="stats-days"></div>
+    </div>
+
+    <div class="stats-section">
+      <h3>🔁 앞으로의 복습 일정</h3>
+      <p class="stats-sub">날짜별로 복습 주기가 돌아오는 문제 수예요. 막대를 누르면 정확한 숫자가 보여요.</p>
+      <div id="stats-forecast"></div>
+    </div>
+
+    <div class="stats-section">
+      <h3>🧩 유형별 레벨 분포</h3>
+      <p class="stats-sub">문제 유형마다 레벨(0~7)별 문제 수예요. 오른쪽으로 갈수록 잘 외운 문제예요.</p>
+      <div id="stats-levels"></div>
+    </div>
+
+    <div class="stats-section">
+      <h3>🎯 유형별 정답률</h3>
+      <div id="stats-accuracy-types"></div>
+    </div>
+
+    <div class="stats-section">
+      <h3>⭐ 우선 학습 단어 진행률</h3>
+      <div id="stats-priority"></div>
+    </div>
+
+    <div class="stats-section">
+      <h3>❗ 자주 틀리는 문제 TOP 10</h3>
+      <div id="stats-top-wrong"></div>
+    </div>
 
     <button id="btn-back-from-stats" class="big-btn">대시보드로 돌아가기</button>
   </section>
@@ -131,7 +242,7 @@
 
     <div id="quiz-card" class="quiz-card"></div>
 
-    <div id="quiz-feedback" class="quiz-feedback"></div>
+    <div id="quiz-feedback" class="quiz-feedback" aria-live="polite"></div>
 
     <button id="btn-next" class="big-btn" disabled>다음 문제 ▶</button>
   </section>
@@ -161,6 +272,7 @@
 <script src="js/storage.js"></script>
 <script src="js/srs.js"></script>
 <script src="js/quiz.js"></script>
+<script src="js/stats.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

@@ -76,6 +76,8 @@ window.VocabApp = window.VocabApp || {};
       newWordsDate: null,
       wrongToday: [],
       wrongTodayDate: null,
+      dailyLog: {},
+      dailyLogStart: null,
     });
     if (stats.newWordsDate !== todayStr()) {
       stats.newWordsToday = 0;
