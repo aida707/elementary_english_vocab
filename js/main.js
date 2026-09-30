@@ -2,7 +2,7 @@ const BASE_WORDS = window.VocabApp.WORDS;
 const BASE_WORDS_BY_ID = new Map(BASE_WORDS.map((w) => [w.id, w]));
 const store = window.VocabApp.store;
 const { newCard, recordAnswer, isDue, isMastered, INTERVAL_DAYS } = window.VocabApp.srs;
-const { buildQuestion, checkAnswer, shuffle, speak, QUESTION_TYPES } = window.VocabApp.quiz;
+const { buildQuestion, checkAnswer, findSameMeaningWord, shuffle, speak, QUESTION_TYPES } = window.VocabApp.quiz;
 
 const FREE_PRACTICE_SIZE = 15;
 const NEW_WORDS_PER_DAY = 20;
@@ -164,7 +164,7 @@ function loadUserWords() {
 
 // (단어, 문제유형) 쌍 하나하나를 독립된 카드로 보고, 실제로 한 번이라도 푼 적 있는
 // 카드 중 복습 기한(next)이 된 것만 모은다. 아직 한 번도 안 푼 유형은 여기 포함하지
-// 않고, 아래 computeNewCandidatePairs()의 "신규" 풀로 보내 하루 도입 한도를 통과하게 한다.
+// 않고, 아래 computeNewCandidates()의 "신규" 후보로 보내 하루 도입 한도를 통과하게 한다.
 function computeDueItems() {
   const items = [];
   state.words.forEach((w) => {
@@ -178,58 +178,69 @@ function computeDueItems() {
   return items;
 }
 
-// 아직 한 번도 안 푼 (단어, 문제유형) 쌍들의 도입 순서를 정한다. 우선순위는:
-// 1) 이미 손댄 단어의 남은 유형 중 사용자가 정한 우선 학습 단어부터
-// 2) 이미 손댄 단어의 남은 유형 중 나머지
-// 3) 아직 안 배운 우선 학습 단어
-// 4) 아직 안 배운 나머지 단어 (랜덤)
-// 이렇게 하면 우선 학습 단어를 먼저 익히고, 그 단어들의 4가지 문제 유형을
-// 전부 끝낸 뒤에야 나머지 단어로 자연스럽게 넘어간다.
-function computeNewCandidatePairs() {
-  const priorityContinuing = [];
-  const otherContinuing = [];
-  state.words.forEach((w) => {
-    const rec = state.progress[w.id];
-    if (!rec) return;
-    const bucket = state.priorityIds.has(w.id) ? priorityContinuing : otherContinuing;
-    QUESTION_TYPES.forEach((type) => {
-      if (!rec[type]) bucket.push({ word: w, type });
-    });
-  });
-
+// 아직 한 번도 안 푼 (단어, 문제유형) 쌍의 후보를 두 갈래로 나눈다.
+// - fresh: 처음 보는 단어. 네 유형 중 하나를 무작위로 골라 첫 문제로 낸다.
+// - expand: 이미 배운 단어의 아직 안 푼 유형. 오늘 이미 푼 단어는 빼서 다음 날부터 나오게 한다.
+// 두 갈래 모두 사용자가 정한 우선 학습 단어가 먼저, 나머지는 무작위 순서다.
+function computeNewCandidates() {
+  const today = store.todayStr();
+  const priorityExpand = [];
+  const otherExpand = [];
   const priorityFresh = [];
   const otherFresh = [];
   state.words.forEach((w) => {
-    if (state.progress[w.id]) return;
-    const pair = { word: w, type: QUESTION_TYPES[Math.floor(Math.random() * QUESTION_TYPES.length)] };
-    (state.priorityIds.has(w.id) ? priorityFresh : otherFresh).push(pair);
+    const isPriority = state.priorityIds.has(w.id);
+    const rec = state.progress[w.id];
+    if (!rec) {
+      const pair = { word: w, type: QUESTION_TYPES[Math.floor(Math.random() * QUESTION_TYPES.length)] };
+      (isPriority ? priorityFresh : otherFresh).push(pair);
+      return;
+    }
+    if (Object.values(rec).some((card) => card && card.lastSeen === today)) return;
+    QUESTION_TYPES.forEach((type) => {
+      if (!rec[type]) (isPriority ? priorityExpand : otherExpand).push({ word: w, type });
+    });
   });
-
-  return [
-    ...shuffle(priorityContinuing),
-    ...shuffle(otherContinuing),
-    ...shuffle(priorityFresh),
-    ...shuffle(otherFresh),
-  ];
+  return {
+    fresh: [...shuffle(priorityFresh), ...shuffle(otherFresh)],
+    expand: [...shuffle(priorityExpand), ...shuffle(otherExpand)],
+  };
 }
 
-// 대시보드에 보여주는 "새 단어" 개수는 실제로 다음 세션에 들어갈 개수와 같아야 하므로
-// buildStudyItems()와 동일한 공식(복습이 많으면 최소 5개까지만)을 사용한다.
-function computeNewAvailable() {
-  const dueCount = computeDueItems().length;
+// 신규 자리의 절반(홀수면 하나 더)은 새 단어, 나머지 절반은 배운 단어의 다른 유형으로 채운다.
+// 한쪽 후보가 모자라면 다른 쪽으로 채운다.
+function splitNewSlots(total, freshAvail, expandAvail) {
+  const expand = Math.min(expandAvail, Math.max(total - Math.ceil(total / 2), total - freshAvail));
+  const fresh = Math.min(freshAvail, total - expand);
+  return { fresh, expand };
+}
+
+const sortReviews = (dueItems) =>
+  shuffle(dueItems).sort((a, b) => (a.next < b.next ? -1 : a.next > b.next ? 1 : a.level - b.level));
+
+// 오늘의 학습 한 세션의 구성. 신규 자리는 하루 20개 한도 안에서 복습이 적으면 많이,
+// 복습이 많아도 최소 5개. 복습은 신규를 뺀 자리만큼(총 30문제)만 가장 오래 밀린 것부터 넣는다.
+// 같은 세션에서 한 단어가 복습과 다른 유형으로 두 번 나오지 않도록, 복습에 들어간 단어는
+// "다른 유형" 후보에서 뺀다. 대시보드의 숫자도 이 함수로 계산해 실제 세션과 맞춘다.
+function planStudySession() {
+  const due = sortReviews(computeDueItems());
   const capLeft = Math.max(0, NEW_WORDS_PER_DAY - state.stats.newWordsToday);
-  const candidateCount = computeNewCandidatePairs().length;
-  const budget = Math.max(MIN_NEW_PER_SESSION, NEW_WORDS_PER_DAY - dueCount);
-  return Math.min(budget, capLeft, candidateCount);
+  const budget = Math.min(capLeft, Math.max(MIN_NEW_PER_SESSION, NEW_WORDS_PER_DAY - due.length));
+  const { fresh, expand } = computeNewCandidates();
+
+  const firstTotal = Math.min(budget, fresh.length + expand.length);
+  const reviewWordIds = new Set(due.slice(0, MAX_SESSION_SIZE - firstTotal).map((it) => it.word.id));
+  const expandOk = expand.filter((it) => !reviewWordIds.has(it.word.id));
+
+  const newTotal = Math.min(budget, fresh.length + expandOk.length);
+  const split = splitNewSlots(newTotal, fresh.length, expandOk.length);
+  const newItems = [...fresh.slice(0, split.fresh), ...expandOk.slice(0, split.expand)];
+  return { dueCount: due.length, reviews: due.slice(0, MAX_SESSION_SIZE - newItems.length), newItems };
 }
 
-// 하루 총 문제 수가 MAX_SESSION_SIZE를 넘지 않도록, 신규 자리를 뺀 만큼만 복습을 넣는다.
-// 밀린 복습이 많으면 가장 오래 밀린 것부터 넣고, 나머지는 다음 날로 넘어간다.
+// 오늘 학습을 마친 뒤 밀린 복습을 더 풀 때처럼 신규 없이 복습만 고를 때
 function pickReviews(dueItems, newCount) {
-  const limit = Math.max(0, MAX_SESSION_SIZE - newCount);
-  return shuffle(dueItems)
-    .sort((a, b) => (a.next < b.next ? -1 : a.next > b.next ? 1 : a.level - b.level))
-    .slice(0, limit);
+  return sortReviews(dueItems).slice(0, Math.max(0, MAX_SESSION_SIZE - newCount));
 }
 
 function isWordMastered(wordId) {
@@ -245,9 +256,10 @@ function renderDashboard() {
   // 학습한 단어 수는 실제 단어 개수(통계의 "배운 단어"와 같음). 복습/새 단어 수는 실제로 풀게 될
   // 문제 개수와 맞추기 위해 (단어, 문제유형) 쌍 단위로 센다.
   const learned = state.words.filter((w) => state.progress[w.id]).length;
-  const due = computeDueItems().length;
-  const newAvail = computeNewAvailable();
-  const reviewToday = Math.min(due, MAX_SESSION_SIZE - newAvail);
+  const plan = planStudySession();
+  const due = plan.dueCount;
+  const newAvail = plan.newItems.length;
+  const reviewToday = plan.reviews.length;
 
   el("stat-learned").textContent = learned;
   el("stat-due").textContent = due;
@@ -296,15 +308,10 @@ function renderStats() {
   });
 }
 
-// 새로 배우는 (단어,유형) 쌍은 최소 5개는 항상 넣어서 복습이 많이 쌓인 날에도 새로운
-// 학습이 완전히 밀리지 않게 하고, 복습이 적은 평소에는 하루 한도(20개)만큼 나온다.
-// 복습은 신규를 뺀 자리만큼만 넣어서 하루 총 문제 수는 MAX_SESSION_SIZE(30)를 넘지 않는다.
 function buildStudyItems() {
-  const newCount = computeNewAvailable();
-  const reviews = pickReviews(computeDueItems(), newCount);
-  const newItems = computeNewCandidatePairs()
-    .slice(0, newCount)
-    .map((it) => ({ ...it, isNew: true }));
+  const plan = planStudySession();
+  const reviews = plan.reviews;
+  const newItems = plan.newItems.map((it) => ({ ...it, isNew: true }));
   if (newItems.length) {
     state.stats.newWordsToday += newItems.length;
     store.saveStats(state.user.id, state.stats);
@@ -366,7 +373,7 @@ function renderQuestion() {
   el("progress-fill").style.width = `${(state.index / state.session.length) * 100}%`;
   const feedback = el("quiz-feedback");
   feedback.textContent = "";
-  feedback.classList.remove("correct", "wrong");
+  feedback.classList.remove("correct", "wrong", "notice");
   feedback.style.setProperty("--fit", "1");
   el("btn-next").disabled = true;
 
@@ -382,12 +389,13 @@ function renderQuestion() {
     card.appendChild(makePrompt(q.prompt));
     card.appendChild(makeOptionsGrid(q.options, (val, btn) => handleAnswer(q, val, btn)));
   } else if (q.type === "word_choice") {
-    card.appendChild(makePrompt(q.prompt));
+    card.appendChild(makePrompt(q.prompt, q.hint));
     card.appendChild(makeOptionsGrid(q.options, (val, btn) => handleAnswer(q, val, btn)));
   } else if (q.type === "spelling_choice") {
     const meaning = document.createElement("div");
     meaning.className = "quiz-prompt small";
     meaning.textContent = q.prompt;
+    appendHint(meaning, q.hint);
     card.appendChild(meaning);
     const masked = document.createElement("div");
     masked.className = "quiz-prompt";
@@ -395,7 +403,7 @@ function renderQuestion() {
     card.appendChild(masked);
     card.appendChild(makeOptionsGrid(q.options, (val, btn) => handleAnswer(q, val, btn)));
   } else if (q.type === "spelling_type") {
-    card.appendChild(makePrompt(q.prompt));
+    card.appendChild(makePrompt(q.prompt, q.hint));
     const wrap = document.createElement("div");
     wrap.className = "type-input";
     const input = document.createElement("input");
@@ -433,11 +441,21 @@ function fitToBox(box, minScale = 0.45) {
   }
 }
 
-function makePrompt(text) {
+function makePrompt(text, hint) {
   const prompt = document.createElement("div");
   prompt.className = "quiz-prompt";
   prompt.textContent = text;
+  appendHint(prompt, hint);
   return prompt;
+}
+
+// many/much처럼 뜻이 같은 단어를 구분하는 힌트는 뜻 아래 작은 글씨로 붙인다.
+function appendHint(prompt, hint) {
+  if (!hint) return;
+  const span = document.createElement("span");
+  span.className = "quiz-hint";
+  span.textContent = `(${hint})`;
+  prompt.appendChild(span);
 }
 
 function makeOptionsGrid(options, onPick) {
@@ -455,6 +473,13 @@ function makeOptionsGrid(options, onPick) {
 
 function handleAnswer(question, value, sourceEl) {
   if (state.answered) return;
+
+  // 뜻이 같은 다른 단어를 쓴 경우(much 문제에 many)는 채점하지 않고 다시 쓰게 한다.
+  const sameMeaning = findSameMeaningWord(question, value, state.words);
+  if (sameMeaning) {
+    showSameMeaningNotice(sameMeaning, sourceEl);
+    return;
+  }
   state.answered = true;
 
   const correct = checkAnswer(question, value);
@@ -504,7 +529,7 @@ function handleAnswer(question, value, sourceEl) {
   }
 
   const feedback = el("quiz-feedback");
-  feedback.classList.remove("correct", "wrong");
+  feedback.classList.remove("correct", "wrong", "notice");
   feedback.classList.add(correct ? "correct" : "wrong");
   feedback.textContent = correct
     ? "정답이에요! 잘했어요 🎉"
@@ -513,6 +538,16 @@ function handleAnswer(question, value, sourceEl) {
 
   speak(question.word.en);
   el("btn-next").disabled = false;
+}
+
+function showSameMeaningNotice(word, input) {
+  const feedback = el("quiz-feedback");
+  feedback.classList.remove("correct", "wrong");
+  feedback.classList.add("notice");
+  feedback.textContent = `"${word.en}"도 뜻이 같지만 이 문제의 단어는 아니에요. 다른 단어를 써 볼까요?`;
+  fitToBox(feedback, 0.6);
+  input.focus();
+  input.select();
 }
 
 // 날짜별로 푼 문제 수를 남긴다(통계의 학습 달력용). 1년 조금 넘게만 보관한다.

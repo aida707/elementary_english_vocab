@@ -451,6 +451,13 @@ body.quiz-mode .app-header { padding: 12px 4px; }
   overflow-wrap: anywhere;
 }
 .quiz-prompt.small { font-size: calc(1.5rem * var(--fit)); }
+.quiz-hint {
+  display: block;
+  margin-top: calc(6px * var(--fit));
+  font-size: calc(1.05rem * var(--fit));
+  font-weight: 600;
+  color: var(--muted);
+}
 
 .options-grid {
   display: grid;
@@ -513,6 +520,7 @@ body.quiz-mode .app-header { padding: 12px 4px; }
 #btn-next { flex: 0 0 auto; }
 .quiz-feedback.correct { background: #e3f7e5; color: #2e7d32; }
 .quiz-feedback.wrong { background: #fdeaef; color: #c2185b; }
+.quiz-feedback.notice { background: #fff4d6; color: #8a5a00; }
 
 /* 결과 */
 .result-summary { display: flex; gap: 12px; }
