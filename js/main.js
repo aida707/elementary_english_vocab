@@ -1,12 +1,12 @@
 const BASE_WORDS = window.VocabApp.WORDS;
 const BASE_WORDS_BY_ID = new Map(BASE_WORDS.map((w) => [w.id, w]));
 const store = window.VocabApp.store;
-const { newCard, recordAnswer, isDue, isMastered, INTERVAL_DAYS } = window.VocabApp.srs;
+const { newCard, recordAnswer, isDue, dueDate, isWeekend, isMastered, INTERVAL_DAYS } = window.VocabApp.srs;
 const { buildQuestion, checkAnswer, findSameMeaningWord, shuffle, speak, QUESTION_TYPES } = window.VocabApp.quiz;
 
 const FREE_PRACTICE_SIZE = 15;
 const NEW_WORDS_PER_DAY = 20;
-const MIN_NEW_PER_SESSION = 5;
+const MIN_NEW_PER_SESSION = 7;
 const MAX_SESSION_SIZE = 30;
 const EMOJIS = ["🐶", "🐱", "🐰", "🐻", "🦊", "🐼", "🦁", "🐸", "🐵", "🐯", "🦄", "🐧"];
 
@@ -172,7 +172,7 @@ function computeDueItems() {
     if (!rec) return;
     QUESTION_TYPES.forEach((type) => {
       const card = rec[type];
-      if (card && isDue(card)) items.push({ word: w, type, next: card.next, level: card.level });
+      if (card && isDue(card)) items.push({ word: w, type, next: dueDate(card), level: card.level });
     });
   });
   return items;
@@ -219,12 +219,14 @@ const sortReviews = (dueItems) =>
   shuffle(dueItems).sort((a, b) => (a.next < b.next ? -1 : a.next > b.next ? 1 : a.level - b.level));
 
 // 오늘의 학습 한 세션의 구성. 신규 자리는 하루 20개 한도 안에서 복습이 적으면 많이,
-// 복습이 많아도 최소 5개. 복습은 신규를 뺀 자리만큼(총 30문제)만 가장 오래 밀린 것부터 넣는다.
+// 복습이 많아도 최소 7개. 복습은 신규를 뺀 자리만큼(총 30문제)만 가장 오래 밀린 것부터 넣는다.
+// 주말(토/일)에는 새 복습이 돌아오지 않으므로, 밀린 복습이 남아 있을 때만 학습할 수 있다.
 // 같은 세션에서 한 단어가 복습과 다른 유형으로 두 번 나오지 않도록, 복습에 들어간 단어는
 // "다른 유형" 후보에서 뺀다. 대시보드의 숫자도 이 함수로 계산해 실제 세션과 맞춘다.
 function planStudySession() {
   const due = sortReviews(computeDueItems());
   const capLeft = Math.max(0, NEW_WORDS_PER_DAY - state.stats.newWordsToday);
+  if (isWeekend(store.todayStr()) && due.length === 0) return { dueCount: 0, reviews: [], newItems: [] };
   const budget = Math.min(capLeft, Math.max(MIN_NEW_PER_SESSION, NEW_WORDS_PER_DAY - due.length));
   const { fresh, expand } = computeNewCandidates();
 
@@ -267,7 +269,11 @@ function renderDashboard() {
   el("stat-streak").textContent = `${state.stats.streak || 0}🔥`;
 
   const nothingToStudy = due === 0 && newAvail === 0;
-  el("dash-empty-msg").classList.toggle("hidden", !nothingToStudy);
+  const emptyMsg = el("dash-empty-msg");
+  emptyMsg.classList.toggle("hidden", !nothingToStudy);
+  emptyMsg.textContent = isWeekend(store.todayStr())
+    ? "주말에는 밀린 복습이 있을 때만 학습할 수 있어요. 오늘은 푹 쉬거나 자유 연습을 해 볼까요?"
+    : "오늘 복습할 단어가 없어요! 자유 연습으로 더 배워볼까요?";
   el("btn-start-study").disabled = nothingToStudy;
 
   const backlog = el("dash-backlog-msg");
@@ -304,6 +310,7 @@ function renderStats() {
     types: QUESTION_TYPES,
     maxLevel: INTERVAL_DAYS.length - 1,
     dailyCap: MAX_SESSION_SIZE,
+    dueDate,
     isMastered,
   });
 }

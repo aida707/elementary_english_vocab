@@ -6,7 +6,6 @@ window.VocabApp = window.VocabApp || {};
 // 학습 단어 목록에 이미 있는 단어는 여기 넣지 않는다.
 window.VocabApp.ACCEPTED_WORDS = [
   // 큰 · 거대한 (big, large, great)
-  ["huge", "큰, 거대한"],
   ["giant", "거대한"],
   ["enormous", "거대한"],
   // 빠른 (fast, quick)
@@ -19,44 +18,33 @@ window.VocabApp.ACCEPTED_WORDS = [
   ["adorable", "귀여운"],
   // 좋은 · 멋진 · 훌륭한 (good, nice, fine)
   ["wonderful", "멋진, 훌륭한"],
-  ["fantastic", "멋진"],
   ["awesome", "멋진"],
   // 기쁜 · 즐거운 (glad)
   ["joyful", "기쁜, 즐거운"],
   ["pleased", "기쁜"],
   ["delighted", "기쁜"],
   // 화난 (angry)
-  ["mad", "화난, 성난"],
   ["furious", "화난, 성난"],
   // 피곤한 · 지친 (tired)
   ["exhausted", "지친, 피곤한"],
   ["weary", "지친, 피곤한"],
   // 무서워하여 (afraid)
   ["scared", "무서워하여, 두려워하여"],
-  ["frightened", "무서워하여, 두려워하여"],
   // 조용한 · 고요한 (quiet)
   ["silent", "조용한"],
   ["calm", "고요한"],
   // 돈 많은 (rich)
   ["wealthy", "돈 많은, 부자의"],
-  // 어려운 (hard)
-  ["difficult", "어려운"],
   // 강한 · 힘센 (strong)
   ["powerful", "강한, 힘센"],
   // 진짜의 (real)
   ["genuine", "진짜의"],
   // 아주 · 대단히 (very)
   ["extremely", "아주, 대단히"],
-  // 옳은 (right)
-  ["correct", "옳은"],
-  // 확신하는 (sure)
-  ["certain", "~을 확신하는"],
   // 살찐 (fat)
   ["overweight", "살찐"],
   // 시작하다 (begin, start)
   ["commence", "시작하다"],
-  // 끝내다 (finish)
-  ["complete", "끝내다"],
   // 사다 (buy)
   ["purchase", "사다"],
   // 고치다 (fix)
@@ -88,15 +76,12 @@ window.VocabApp.ACCEPTED_WORDS = [
   ["scent", "냄새"],
   ["odor", "냄새"],
   // 사진 (picture)
-  ["photo", "사진"],
   ["photograph", "사진"],
   // 시험 (test)
   ["exam", "시험"],
   ["examination", "시험"],
   // 선물 (present)
   ["gift", "선물"],
-  // 접시 (dish)
-  ["plate", "접시"],
   // 직업 (job)
   ["occupation", "직업"],
   // 자동차 (car)

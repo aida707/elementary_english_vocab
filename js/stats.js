@@ -208,13 +208,14 @@ window.VocabApp = window.VocabApp || {};
     return Math.ceil(v / step) * step;
   };
 
-  function renderForecast(box, cards, today, dailyCap) {
+  function renderForecast(box, cards, today, dailyCap, dueDate) {
     box.innerHTML = "";
     const daily = new Array(FORECAST_DAYS + 1).fill(0);
     let mid = 0;
     let far = 0;
     cards.forEach((card) => {
-      const d = card.next ? toDayNum(card.next) - today : 0;
+      const due = dueDate(card);
+      const d = due ? toDayNum(due) - today : 0;
       if (d <= 0) daily[0]++;
       else if (d <= FORECAST_DAYS) daily[d]++;
       else if (d <= 29) mid++;
@@ -437,7 +438,7 @@ window.VocabApp = window.VocabApp || {};
       if (rec) ctx.types.forEach((t) => rec[t] && cards.push(rec[t]));
     });
     renderStudyDays(document.getElementById("stats-days"), ctx.stats, today);
-    renderForecast(document.getElementById("stats-forecast"), cards, today, ctx.dailyCap);
+    renderForecast(document.getElementById("stats-forecast"), cards, today, ctx.dailyCap, ctx.dueDate);
     renderLevels(document.getElementById("stats-levels"), ctx.words, ctx.progress, ctx.types, ctx.maxLevel);
     renderAccuracy(document.getElementById("stats-accuracy-types"), ctx.words, ctx.progress, ctx.types);
     renderPriority(document.getElementById("stats-priority"), ctx.priorityIds, ctx.progress, ctx.types, ctx.isMastered);

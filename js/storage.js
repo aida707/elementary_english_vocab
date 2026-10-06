@@ -94,13 +94,25 @@ window.VocabApp = window.VocabApp || {};
     writeJSON(`vocab_app_stats_${userId}`, stats);
   }
 
+  // 주말은 쉬어도 연속 학습일이 끊기지 않는다: 지난 학습일과 오늘 사이의 날이 모두 토/일이면 이어진다.
+  // (주말에 공부하면 그날도 연속일에 더해진다.)
+  function continuesStreak(lastDate, today) {
+    if (!lastDate) return false;
+    const [y, m, d] = lastDate.split("-").map(Number);
+    const day = new Date(y, m - 1, d + 1);
+    for (let i = 0; i < 7; i++) {
+      const dayStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+      if (dayStr >= today) return true;
+      if (day.getDay() !== 0 && day.getDay() !== 6) return false;
+      day.setDate(day.getDate() + 1);
+    }
+    return false;
+  }
+
   function recordStudyDay(stats) {
     const today = todayStr();
     if (stats.lastStudyDate === today) return stats;
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
-    stats.streak = stats.lastStudyDate === yStr ? stats.streak + 1 : 1;
+    stats.streak = continuesStreak(stats.lastStudyDate, today) ? (stats.streak || 0) + 1 : 1;
     stats.longestStreak = Math.max(stats.longestStreak || 0, stats.streak);
     stats.lastStudyDate = today;
     return stats;

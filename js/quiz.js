@@ -79,7 +79,7 @@ window.VocabApp = window.VocabApp || {};
 
   function checkAnswer(question, userAnswer) {
     if (question.type === "spelling_type") {
-      return String(userAnswer || "").trim().toLowerCase() === question.answer;
+      return String(userAnswer || "").trim().toLowerCase().replace(/\s+/g, " ") === question.answer;
     }
     return userAnswer === question.answer;
   }

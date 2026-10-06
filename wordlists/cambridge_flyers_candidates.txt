@@ -1,0 +1,227 @@
+# Cambridge A2 Flyers 단어 중 앱 단어장(js/words.js)에 아직 없는 단어 — 나중에 추가할 후보
+# 출처: Pre A1 Starters, A1 Movers and A2 Flyers Wordlists (Cambridge English, 2025)
+#   https://www.cambridgeenglish.org/images/506166-starters-movers-flyers-word-list-2025.pdf
+# 원문 그대로라 영국식 철자(yoghurt 등)와 구문(look after 등)이 섞여 있어요. 추가할 때 손질이 필요해요.
+# 앱에서는 쓰이지 않는 참고용 파일이에요.
+
+a few
+a little
+actually
+adventure
+amazing
+ambulance
+anyone
+anything
+anywhere
+appear
+artist
+as ... as
+astronaut
+at the moment
+bandage
+beetle
+bin
+bit
+bored
+bracelet
+broken
+businessman
+by myself
+by yourself
+camel
+castle
+cave
+century
+cereal
+channel
+chat
+chess
+chopsticks
+comb
+competition
+concert
+conversation
+cooker
+costume
+creature
+crown
+cushion
+cycle
+desert
+designer
+dinosaur
+disappear
+each
+eagle
+elbow
+else
+engineer
+enormous
+entrance
+envelope
+environment
+ever
+everywhere
+excited
+exit
+expensive
+explain
+explore
+extinct
+factory
+fall over
+fetch
+fog
+foggy
+fridge
+friendly
+frightening
+fur
+furry
+geography
+get to
+glue
+go away
+go out
+golf
+gym
+honey
+horrible
+how long
+if you want
+important
+improve
+in a minute
+information
+insect
+instead
+instrument
+interested
+interesting
+invent
+invitation
+journalist
+journey
+language
+later
+lift
+look after
+look like
+lovely
+lucky
+magazine
+make sure
+manager
+married
+meal
+mechanic
+medicine
+meeting
+metal
+midday
+midnight
+missing
+mix
+motorway
+museum
+necklace
+nest
+no problem
+no-one
+noisy
+nowhere
+ocean
+octopus
+of course
+olives
+online
+oven
+passenger
+past
+path
+pepper
+perhaps
+photographer
+planet
+platform
+pleased
+police station
+pond
+pop music
+popular
+postcard
+prefer
+prepare
+prize
+puzzle
+pyramid
+quarter
+quite
+railway
+repair
+rock music
+screen
+search
+secret
+several
+shampoo
+shelf
+since
+singer
+skyscraper
+sledge
+snack
+snowball
+snowboard
+snowboarding
+snowman
+somewhere
+sore
+spaceship
+special
+spot
+spotted
+stadium
+still
+straight on
+stream
+stripe
+striped
+subject
+such
+suddenly
+suitcase
+sunglasses
+surname
+swan
+tidy
+timetable
+toe
+tortoise
+tour
+trainers
+tune
+turn on
+unfriendly
+unhappy
+uniform
+university
+unkind
+untidy
+unusual
+usually
+view
+volleyball
+waiter
+wheel
+while
+whisper
+whistle
+wild
+winner
+without
+wonderful
+wool
+worried
+x-ray
+yoghurt
