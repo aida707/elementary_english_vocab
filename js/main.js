@@ -220,14 +220,16 @@ const sortReviews = (dueItems) =>
 
 // 오늘의 학습 한 세션의 구성. 신규 자리는 하루 20개 한도 안에서 복습이 적으면 많이,
 // 복습이 많아도 최소 7개. 복습은 신규를 뺀 자리만큼(총 30문제)만 가장 오래 밀린 것부터 넣는다.
+// 새 문제는 그날 첫 학습에만 넣고, 그 뒤의 학습은 남은 복습만 푼다(복습이 끝나면 그날 학습도 끝).
 // 주말(토/일)에는 새 복습이 돌아오지 않으므로, 밀린 복습이 남아 있을 때만 학습할 수 있다.
 // 같은 세션에서 한 단어가 복습과 다른 유형으로 두 번 나오지 않도록, 복습에 들어간 단어는
 // "다른 유형" 후보에서 뺀다. 대시보드의 숫자도 이 함수로 계산해 실제 세션과 맞춘다.
 function planStudySession() {
   const due = sortReviews(computeDueItems());
-  const capLeft = Math.max(0, NEW_WORDS_PER_DAY - state.stats.newWordsToday);
+  const newAlreadyGiven = state.stats.newWordsToday > 0;
   if (isWeekend(store.todayStr()) && due.length === 0) return { dueCount: 0, reviews: [], newItems: [] };
-  const budget = Math.min(capLeft, Math.max(MIN_NEW_PER_SESSION, NEW_WORDS_PER_DAY - due.length));
+  if (newAlreadyGiven) return { dueCount: due.length, reviews: due.slice(0, MAX_SESSION_SIZE), newItems: [] };
+  const budget = Math.min(NEW_WORDS_PER_DAY, Math.max(MIN_NEW_PER_SESSION, NEW_WORDS_PER_DAY - due.length));
   const { fresh, expand } = computeNewCandidates();
 
   const firstTotal = Math.min(budget, fresh.length + expand.length);
@@ -271,7 +273,9 @@ function renderDashboard() {
   const nothingToStudy = due === 0 && newAvail === 0;
   const emptyMsg = el("dash-empty-msg");
   emptyMsg.classList.toggle("hidden", !nothingToStudy);
-  emptyMsg.textContent = isWeekend(store.todayStr())
+  emptyMsg.textContent = state.stats.newWordsToday > 0
+    ? "오늘 학습을 모두 마쳤어요! 내일 또 만나요. 자유 연습은 언제든 할 수 있어요."
+    : isWeekend(store.todayStr())
     ? "주말에는 밀린 복습이 있을 때만 학습할 수 있어요. 오늘은 푹 쉬거나 자유 연습을 해 볼까요?"
     : "오늘 복습할 단어가 없어요! 자유 연습으로 더 배워볼까요?";
   el("btn-start-study").disabled = nothingToStudy;
