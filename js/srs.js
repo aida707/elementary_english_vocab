@@ -22,6 +22,17 @@ window.VocabApp = window.VocabApp || {};
 
   const isWeekend = (dateStr) => [0, 6].includes(parseDay(dateStr).getDay());
 
+  // 같은 날 배운 단어들이 늘 같은 날 함께 돌아오지 않도록, 복습 간격을 20% 확률로 하루 당기고
+  // 20% 확률로 하루 미룬다. 단, 푼 날 당일로 당겨지지는 않는다(최소 1일).
+  function jitterDays(days) {
+    const r = Math.random();
+    const shift = r < 0.2 ? -1 : r < 0.4 ? 1 : 0;
+    return Math.max(1, days + shift);
+  }
+
+  // 다음 복습 날: 간격을 조금 흔든 뒤 주말이면 평일로 옮긴다.
+  const scheduleNext = (today, level) => moveOffWeekend(addDays(today, jitterDays(INTERVAL_DAYS[level])), today);
+
   // 주말에는 복습이 돌아오지 않는다. 토요일은 금요일로 당기고, 일요일은 월요일로 미룬다.
   // 금요일로 당기면 마지막으로 푼 날 이전이 되는 경우(금요일에 푼 문제의 "1일 후" 등)는 월요일로 미룬다.
   function moveOffWeekend(dateStr, studiedOn) {
@@ -52,14 +63,14 @@ window.VocabApp = window.VocabApp || {};
       // 처음 보고 맞히면 레벨 2(4일 후)로 바로 올라가고, 이미 본 적 있는 복습 문제는
       // 평소처럼 한 레벨씩 올라간다.
       updated.level = isFirstAttempt ? 2 : Math.min((card.level || 0) + 1, MAX_LEVEL);
-      updated.next = moveOffWeekend(addDays(today, INTERVAL_DAYS[updated.level]), today);
+      updated.next = scheduleNext(today, updated.level);
     } else {
       updated.wrong = (card.wrong || 0) + 1;
       // 처음 보고 틀리면 레벨 0(1일 후). 복습 중에 틀리면 완전히 리셋하지 않고 한 레벨만
       // 낮추고, 다음 복습도 그 낮아진 레벨의 간격을 따른다. (당일 오답은 "오늘 틀린 문제
       // 복습하기"로 바로 다시 볼 수 있으므로 무조건 "내일" 강제하지 않는다.)
       updated.level = isFirstAttempt ? 0 : Math.max((card.level || 0) - 1, 0);
-      updated.next = moveOffWeekend(addDays(today, INTERVAL_DAYS[updated.level]), today);
+      updated.next = scheduleNext(today, updated.level);
     }
     return updated;
   }

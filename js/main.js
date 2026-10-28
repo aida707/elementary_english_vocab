@@ -336,9 +336,9 @@ function buildFreePracticeItems() {
     .map((w) => ({ word: w, type: QUESTION_TYPES[Math.floor(Math.random() * QUESTION_TYPES.length)] }));
 }
 
-// 오늘 학습을 마친 뒤 밀린 복습을 더 풀고 싶을 때: 새 단어 없이 복습만 30개씩(오래 밀린 것부터)
+// 오늘 학습을 마친 뒤 밀린 복습을 더 풀고 싶을 때: 새 단어 없이 복습만 30개씩(오래 밀린 것부터 고르고 순서는 섞는다)
 function buildMoreReviewItems() {
-  return pickReviews(computeDueItems(), 0);
+  return shuffle(pickReviews(computeDueItems(), 0));
 }
 
 // mode: "study"(오늘의 학습) | "free"(자유 연습) | "review"(남은 복습 더 하기)
@@ -362,7 +362,7 @@ function startSession(mode) {
 // 복습 주기와 무관하게, 오늘 하루 동안 틀린 문제만 모아서 다시 풀어보는 보너스 라운드.
 // 정답 기록·SRS 일정·통계에는 전혀 반영되지 않는다.
 function startWrongReview() {
-  const items = (state.stats.wrongToday || [])
+  const items = shuffle(state.stats.wrongToday || [])
     .map(({ wordId, type }) => ({ word: state.wordsById.get(wordId), type }))
     .filter((it) => it.word);
   if (!items.length) return;
@@ -409,7 +409,7 @@ function renderQuestion() {
     appendHint(meaning, q.hint);
     card.appendChild(meaning);
     const masked = document.createElement("div");
-    masked.className = "quiz-prompt";
+    masked.className = "quiz-prompt quiz-masked";
     masked.textContent = q.masked;
     card.appendChild(masked);
     card.appendChild(makeOptionsGrid(q.options, (val, btn) => handleAnswer(q, val, btn)));
@@ -538,6 +538,7 @@ function handleAnswer(question, value, sourceEl) {
       else if (btn === sourceEl) btn.classList.add("wrong");
     });
   }
+  if (question.type === "spelling_choice" && correct) fillBlank(question);
 
   const feedback = el("quiz-feedback");
   feedback.classList.remove("correct", "wrong", "notice");
@@ -549,6 +550,19 @@ function handleAnswer(question, value, sourceEl) {
 
   speak(question.word.en);
   el("btn-next").disabled = false;
+}
+
+// 빈칸 철자를 맞히면 빈칸을 채워 단어 전체를 보여 준다. 채운 글자는 색으로 표시한다.
+function fillBlank(question) {
+  const masked = el("quiz-card").querySelector(".quiz-masked");
+  const blankIdx = question.masked.indexOf("_");
+  if (!masked || blankIdx === -1) return;
+  const en = question.word.en;
+  const letter = document.createElement("span");
+  letter.className = "filled-letter";
+  letter.textContent = en[blankIdx];
+  masked.textContent = "";
+  masked.append(en.slice(0, blankIdx), letter, en.slice(blankIdx + 1));
 }
 
 function showSameMeaningNotice(word, input) {

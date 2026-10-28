@@ -325,14 +325,15 @@ h2 { margin: 4px 0; }
 .viz-cal-week { display: grid; grid-template-rows: repeat(7, 18px); gap: 3px; }
 .viz-cal-cell { width: 18px; height: 18px; border-radius: 4px; background: var(--viz-empty); display: inline-block; }
 .viz-cal-cell.future { background: transparent; }
-.viz-cal-cell.cal-1 { background: var(--seq-200); }
-.viz-cal-cell.cal-2 { background: var(--seq-350); }
-.viz-cal-cell.cal-3 { background: var(--seq-500); }
-.viz-cal-cell.cal-4 { background: var(--seq-650); }
+.viz-cal-cell.cal-1 { background: var(--seq-100); }
+.viz-cal-cell.cal-2 { background: var(--seq-200); }
+.viz-cal-cell.cal-3 { background: var(--seq-350); }
+.viz-cal-cell.cal-4 { background: var(--seq-500); }
+.viz-cal-cell.cal-5 { background: var(--seq-650); }
 .viz-cal-cell.today { box-shadow: 0 0 0 2px var(--card), 0 0 0 3px var(--text); }
-.viz-cal-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 10px; margin-top: 10px; font-size: 0.72rem; color: var(--muted); }
-.viz-cal-legend-item { display: inline-flex; align-items: center; gap: 4px; }
-.viz-cal-legend .viz-cal-cell { width: 12px; height: 12px; border-radius: 3px; }
+.viz-cal-legend { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 5px; margin-top: 10px; font-size: 0.72rem; color: var(--muted); }
+.viz-cal-legend-item { display: inline-flex; align-items: center; gap: 3px; }
+.viz-cal-legend .viz-cal-cell { width: 11px; height: 11px; border-radius: 3px; }
 
 /* 복습 일정 막대 */
 .viz-cols { font-size: 0.72rem; color: var(--muted); }
@@ -451,6 +452,8 @@ body.quiz-mode .app-header { padding: 12px 4px; }
   overflow-wrap: anywhere;
 }
 .quiz-prompt.small { font-size: calc(1.5rem * var(--fit)); }
+.filled-letter { color: #2e7d32; text-decoration: underline; text-underline-offset: 0.15em; }
+
 .quiz-hint {
   display: block;
   margin-top: calc(6px * var(--fit));

@@ -121,11 +121,13 @@ window.VocabApp = window.VocabApp || {};
   // ---------- 1. 학습 기록 (공부한 날 + 12주 달력) ----------
 
   const CAL_WEEKS = 12;
+  // 하루 기본 학습량이 30문제라 30에서 색이 끝나지 않도록, 30문제는 가운데 진하기에 오게 나눈다.
   const CAL_BINS = [
-    { min: 1, label: "1~9", cls: "cal-1" },
-    { min: 10, label: "10~19", cls: "cal-2" },
-    { min: 20, label: "20~29", cls: "cal-3" },
-    { min: 30, label: "30+", cls: "cal-4" },
+    { min: 1, label: "1~14", cls: "cal-1" },
+    { min: 15, label: "15~29", cls: "cal-2" },
+    { min: 30, label: "30~44", cls: "cal-3" },
+    { min: 45, label: "45~59", cls: "cal-4" },
+    { min: 60, label: "60+", cls: "cal-5" },
   ];
   const binFor = (count) => [...CAL_BINS].reverse().find((b) => count >= b.min);
 
